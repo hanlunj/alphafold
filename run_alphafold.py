@@ -93,6 +93,18 @@ flags.DEFINE_string('pdb_seqres_database_path', None, 'Path to the PDB '
                     'seqres database for use by hmmsearch.')
 flags.DEFINE_string('template_mmcif_dir', None, 'Path to a directory with '
                     'template mmCIF structures, each named <pdb_id>.cif')
+
+# JHL
+flags.DEFINE_bool('use_gpu', True, 'Enable NVIDIA runtime to run with GPUs.')
+flags.DEFINE_string(
+    'gpu_devices', 'all',
+    'Comma separated list of devices to pass to NVIDIA_VISIBLE_DEVICES.')
+flags.DEFINE_boolean('skip_template', False, 'JHL: Skip template searching.')
+flags.DEFINE_boolean('write_input_feature', False, 'JHL: Write input features in a .pkl file.')
+flags.DEFINE_boolean('write_model_output', False, 'JHL: Write model output in a .pkl file.')
+flags.DEFINE_boolean('write_mmcif', False, 'JHL: Write a mmcif file.')
+flags.DEFINE_boolean('write_ranked_pdb', False, 'JHL: Write ranked pdbs.')
+
 flags.DEFINE_string('max_template_date', None, 'Maximum template release date '
                     'to consider. Important if folding historical test sets.')
 flags.DEFINE_string('obsolete_pdbs_path', None, 'Path to file containing a '
@@ -240,6 +252,11 @@ def predict_structure(
     random_seed: int,
     models_to_relax: ModelsToRelax,
     model_type: str,
+    skip_template: bool, #JHL
+    write_input_feature: bool, #JHL
+    write_model_output: bool, #JHL
+    write_mmcif: bool, #JHL
+    write_ranked_pdb: bool, #JHL
 ):
   """Predicts structure using AlphaFold for the given sequence."""
   logging.info('Predicting %s', fasta_name)
@@ -255,13 +272,15 @@ def predict_structure(
   t_0 = time.time()
   feature_dict = data_pipeline.process(
       input_fasta_path=fasta_path,
-      msa_output_dir=msa_output_dir)
+      msa_output_dir=msa_output_dir,
+      skip_template=skip_template)
   timings['features'] = time.time() - t_0
 
   # Write out features as a pickled dictionary.
-  features_output_path = os.path.join(output_dir, 'features.pkl')
-  with open(features_output_path, 'wb') as f:
-    pickle.dump(feature_dict, f, protocol=4)
+  if write_input_feature:
+    features_output_path = os.path.join(output_dir, 'features.pkl')
+    with open(features_output_path, 'wb') as f:
+      pickle.dump(feature_dict, f, protocol=4)
 
   unrelaxed_pdbs = {}
   unrelaxed_proteins = {}
@@ -315,9 +334,10 @@ def predict_structure(
     np_prediction_result = _jnp_to_np(dict(prediction_result))
 
     # Save the model outputs.
-    result_output_path = os.path.join(output_dir, f'result_{model_name}.pkl')
-    with open(result_output_path, 'wb') as f:
-      pickle.dump(np_prediction_result, f, protocol=4)
+    if write_model_output:
+      result_output_path = os.path.join(output_dir, f'result_{model_name}.pkl')
+      with open(result_output_path, 'wb') as f:
+        pickle.dump(np_prediction_result, f, protocol=4)
 
     # Add the predicted LDDT in the b-factor column.
     # Note that higher predicted LDDT value means higher model confidence.
@@ -334,14 +354,15 @@ def predict_structure(
     unrelaxed_pdb_path = os.path.join(output_dir, f'unrelaxed_{model_name}.pdb')
     with open(unrelaxed_pdb_path, 'w') as f:
       f.write(unrelaxed_pdbs[model_name])
-
-    _save_mmcif_file(
-        prot=unrelaxed_protein,
-        output_dir=output_dir,
-        model_name=f'unrelaxed_{model_name}',
-        file_id=str(model_index),
-        model_type=model_type,
-    )
+    
+    if write_mmcif:
+      _save_mmcif_file(
+          prot=unrelaxed_protein,
+          output_dir=output_dir,
+          model_name=f'unrelaxed_{model_name}',
+          file_id=str(model_index),
+          model_type=model_type,
+      )
 
   # Rank by model confidence.
   ranked_order = [
@@ -375,35 +396,38 @@ def predict_structure(
       f.write(relaxed_pdb_str)
 
     relaxed_protein = protein.from_pdb_string(relaxed_pdb_str)
-    _save_mmcif_file(
-        prot=relaxed_protein,
-        output_dir=output_dir,
-        model_name=f'relaxed_{model_name}',
-        file_id='0',
-        model_type=model_type,
-    )
+    if write_mmcif:
+      _save_mmcif_file(
+          prot=relaxed_protein,
+          output_dir=output_dir,
+          model_name=f'relaxed_{model_name}',
+          file_id='0',
+          model_type=model_type,
+      )
 
   # Write out relaxed PDBs in rank order.
-  for idx, model_name in enumerate(ranked_order):
-    ranked_output_path = os.path.join(output_dir, f'ranked_{idx}.pdb')
-    with open(ranked_output_path, 'w') as f:
+  if write_ranked_pdb:
+    for idx, model_name in enumerate(ranked_order):
+      ranked_output_path = os.path.join(output_dir, f'ranked_{idx}.pdb')
+      with open(ranked_output_path, 'w') as f:
+        if model_name in relaxed_pdbs:
+          f.write(relaxed_pdbs[model_name])
+        else:
+          f.write(unrelaxed_pdbs[model_name])
+ 
       if model_name in relaxed_pdbs:
-        f.write(relaxed_pdbs[model_name])
+        protein_instance = protein.from_pdb_string(relaxed_pdbs[model_name])
       else:
-        f.write(unrelaxed_pdbs[model_name])
-
-    if model_name in relaxed_pdbs:
-      protein_instance = protein.from_pdb_string(relaxed_pdbs[model_name])
-    else:
-      protein_instance = protein.from_pdb_string(unrelaxed_pdbs[model_name])
-
-    _save_mmcif_file(
-        prot=protein_instance,
-        output_dir=output_dir,
-        model_name=f'ranked_{idx}',
-        file_id=str(idx),
-        model_type=model_type,
-    )
+        protein_instance = protein.from_pdb_string(unrelaxed_pdbs[model_name])
+ 
+      if write_mmcif:
+        _save_mmcif_file(
+            prot=protein_instance,
+            output_dir=output_dir,
+            model_name=f'ranked_{idx}',
+            file_id=str(idx),
+            model_type=model_type,
+        )
 
   ranking_output_path = os.path.join(output_dir, 'ranking_debug.json')
   with open(ranking_output_path, 'w') as f:
@@ -551,6 +575,11 @@ def main(argv):
         random_seed=random_seed,
         models_to_relax=FLAGS.models_to_relax,
         model_type=model_type,
+        skip_template=FLAGS.skip_template, #JHL
+        write_input_feature=FLAGS.write_input_feature, #JHL
+        write_model_output=FLAGS.write_model_output, #JHL
+        write_mmcif=FLAGS.write_mmcif, #JHL
+        write_ranked_pdb=FLAGS.write_ranked_pdb, #JHL
     )
 
 

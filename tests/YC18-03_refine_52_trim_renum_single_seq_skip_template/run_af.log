@@ -1,0 +1,2 @@
+/bin/bash: /data/anaconda3/envs/af2_hanlun/lib/libtinfo.so.6: no version information available (required by /bin/bash)
+gpu_id: 0

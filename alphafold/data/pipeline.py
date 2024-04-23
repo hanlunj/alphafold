@@ -147,7 +147,7 @@ class DataPipeline:
     self.uniref_max_hits = uniref_max_hits
     self.use_precomputed_msas = use_precomputed_msas
 
-  def process(self, input_fasta_path: str, msa_output_dir: str) -> FeatureDict:
+  def process(self, input_fasta_path: str, msa_output_dir: str, skip_template: bool) -> FeatureDict:
     """Runs alignment tools on the input sequence and creates features."""
     with open(input_fasta_path) as f:
       input_fasta_str = f.read()
@@ -176,12 +176,18 @@ class DataPipeline:
         use_precomputed_msas=self.use_precomputed_msas,
         max_sto_sequences=self.mgnify_max_hits)
 
+    # JHL: TODO: modify msa_for_templates for custom pdb template
     msa_for_templates = jackhmmer_uniref90_result['sto']
     msa_for_templates = parsers.deduplicate_stockholm_msa(msa_for_templates)
     msa_for_templates = parsers.remove_empty_columns_from_stockholm_msa(
         msa_for_templates)
 
-    if self.template_searcher.input_format == 'sto':
+    # JHL: allowing skipping template search 
+    if skip_template:
+      logging.info('JHL: skipping template searching!')
+      pdb_templates_result = ''
+    #if self.template_searcher.input_format == 'sto':
+    elif self.template_searcher.input_format == 'sto':
       pdb_templates_result = self.template_searcher.query(msa_for_templates)
     elif self.template_searcher.input_format == 'a3m':
       uniref90_msa_as_a3m = parsers.convert_stockholm_to_a3m(msa_for_templates)

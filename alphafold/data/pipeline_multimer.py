@@ -200,7 +200,8 @@ class DataPipeline:
       sequence: str,
       description: str,
       msa_output_dir: str,
-      is_homomer_or_monomer: bool) -> pipeline.FeatureDict:
+      is_homomer_or_monomer: bool,
+      skip_template: bool) -> pipeline.FeatureDict:  #JHL
     """Runs the monomer pipeline on a single chain."""
     chain_fasta_str = f'>chain_{chain_id}\n{sequence}\n'
     chain_msa_output_dir = os.path.join(msa_output_dir, chain_id)
@@ -211,7 +212,8 @@ class DataPipeline:
                    chain_id, description)
       chain_features = self._monomer_data_pipeline.process(
           input_fasta_path=chain_fasta_path,
-          msa_output_dir=chain_msa_output_dir)
+          msa_output_dir=chain_msa_output_dir,
+          skip_template=skip_template)  #JHL
 
       # We only construct the pairing features if there are 2 or more unique
       # sequences.
@@ -239,7 +241,8 @@ class DataPipeline:
 
   def process(self,
               input_fasta_path: str,
-              msa_output_dir: str) -> pipeline.FeatureDict:
+              msa_output_dir: str,
+              skip_template: bool) -> pipeline.FeatureDict:  #JHL
     """Runs alignment tools on the input sequences and creates features."""
     with open(input_fasta_path) as f:
       input_fasta_str = f.read()
@@ -266,7 +269,8 @@ class DataPipeline:
           sequence=fasta_chain.sequence,
           description=fasta_chain.description,
           msa_output_dir=msa_output_dir,
-          is_homomer_or_monomer=is_homomer_or_monomer)
+          is_homomer_or_monomer=is_homomer_or_monomer,
+          skip_template=skip_template) #JHL
 
       chain_features = convert_monomer_features(chain_features,
                                                 chain_id=chain_id)

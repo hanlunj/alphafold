@@ -26,6 +26,13 @@ import docker
 from docker import types
 
 
+# JHL
+flags.DEFINE_boolean('skip_template', False, 'JHL: Skip template searching.')
+flags.DEFINE_boolean('write_input_feature', False, 'JHL: Write input features in a .pkl file.')
+flags.DEFINE_boolean('write_model_output', False, 'JHL: Write model output in a .pkl file.')
+flags.DEFINE_boolean('write_mmcif', False, 'JHL: Write a mmcif file.')
+flags.DEFINE_boolean('write_ranked_pdb', False, 'JHL: Write ranked pdbs.')
+
 flags.DEFINE_bool(
     'use_gpu', True, 'Enable NVIDIA runtime to run with GPUs.')
 flags.DEFINE_enum('models_to_relax', 'best', ['best', 'all', 'none'],
@@ -52,7 +59,7 @@ flags.DEFINE_string(
     'output_dir', '/tmp/alphafold',
     'Path to a directory that will store the results.')
 flags.DEFINE_string(
-    'data_dir', None,
+    'data_dir', '/data/alphafold_data/',
     'Path to directory with supporting data: AlphaFold parameters and genetic '
     'and template databases. Set to the target of download_all_databases.sh.')
 flags.DEFINE_string(
@@ -218,6 +225,13 @@ def main(argv):
 
   command_args.extend([
       f'--output_dir={output_target_path}',
+      # JHL
+      f'--skip_template={FLAGS.skip_template}',
+      f'--write_input_feature={FLAGS.write_input_feature}',
+      f'--write_model_output={FLAGS.write_model_output}',
+      f'--write_mmcif={FLAGS.write_mmcif}',
+      f'--write_ranked_pdb={FLAGS.write_ranked_pdb}',
+
       f'--max_template_date={FLAGS.max_template_date}',
       f'--db_preset={FLAGS.db_preset}',
       f'--model_preset={FLAGS.model_preset}',
@@ -225,6 +239,8 @@ def main(argv):
       f'--use_precomputed_msas={FLAGS.use_precomputed_msas}',
       f'--num_multimer_predictions_per_model={FLAGS.num_multimer_predictions_per_model}',
       f'--models_to_relax={FLAGS.models_to_relax}',
+      f'--use_gpu={FLAGS.use_gpu}',
+      f'--gpu_devices={FLAGS.gpu_devices}',
       f'--use_gpu_relax={use_gpu_relax}',
       '--logtostderr',
   ])
