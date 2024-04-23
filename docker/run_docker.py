@@ -32,6 +32,7 @@ flags.DEFINE_boolean('write_input_feature', False, 'JHL: Write input features in
 flags.DEFINE_boolean('write_model_output', False, 'JHL: Write model output in a .pkl file.')
 flags.DEFINE_boolean('write_mmcif', False, 'JHL: Write a mmcif file.')
 flags.DEFINE_boolean('write_ranked_pdb', False, 'JHL: Write ranked pdbs.')
+flags.DEFINE_integer('num_predictions_per_model', 5, 'JHL: this overwrites other *num_ouput* options ')
 
 flags.DEFINE_bool(
     'use_gpu', True, 'Enable NVIDIA runtime to run with GPUs.')
@@ -231,6 +232,7 @@ def main(argv):
       f'--write_model_output={FLAGS.write_model_output}',
       f'--write_mmcif={FLAGS.write_mmcif}',
       f'--write_ranked_pdb={FLAGS.write_ranked_pdb}',
+      f'--num_predictions_per_model={FLAGS.num_predictions_per_model}',
 
       f'--max_template_date={FLAGS.max_template_date}',
       f'--db_preset={FLAGS.db_preset}',

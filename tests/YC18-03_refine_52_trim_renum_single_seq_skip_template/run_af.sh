@@ -9,7 +9,7 @@ fasta=YC18-03_refine_52_trim_renum.af2.fasta
 pre=`basename $fasta .fasta`
 mkdir -p output
 
-python /home/hanlunj/src/alphafold/docker/run_docker.py \
+python /home/hanlunj/src/alphafold_fork/alphafold/docker/run_docker.py \
 --data_dir=/data/alphafold_data \
 --model_preset=multimer \
 --fasta_paths=${workdir}/${fasta} \

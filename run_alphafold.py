@@ -104,6 +104,7 @@ flags.DEFINE_boolean('write_input_feature', False, 'JHL: Write input features in
 flags.DEFINE_boolean('write_model_output', False, 'JHL: Write model output in a .pkl file.')
 flags.DEFINE_boolean('write_mmcif', False, 'JHL: Write a mmcif file.')
 flags.DEFINE_boolean('write_ranked_pdb', False, 'JHL: Write ranked pdbs.')
+flags.DEFINE_integer('num_predictions_per_model', 5, 'JHL: this overwrites other *num_ouput* options ')
 
 flags.DEFINE_string('max_template_date', None, 'Maximum template release date '
                     'to consider. Important if folding historical test sets.')
@@ -521,14 +522,18 @@ def main(argv):
       use_precomputed_msas=FLAGS.use_precomputed_msas)
 
   if run_multimer_system:
-    num_predictions_per_model = FLAGS.num_multimer_predictions_per_model
+    #num_predictions_per_model = FLAGS.num_multimer_predictions_per_model
+    # JHL
+    num_predictions_per_model = FLAGS.num_predictions_per_model
     data_pipeline = pipeline_multimer.DataPipeline(
         monomer_data_pipeline=monomer_data_pipeline,
         jackhmmer_binary_path=FLAGS.jackhmmer_binary_path,
         uniprot_database_path=FLAGS.uniprot_database_path,
         use_precomputed_msas=FLAGS.use_precomputed_msas)
   else:
-    num_predictions_per_model = 1
+    #num_predictions_per_model = 1
+    # JHL
+    num_predictions_per_model = FLAGS.num_predictions_per_model
     data_pipeline = monomer_data_pipeline
 
   model_runners = {}
