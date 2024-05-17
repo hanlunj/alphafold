@@ -33,6 +33,8 @@ flags.DEFINE_boolean('write_model_output', False, 'JHL: Write model output in a 
 flags.DEFINE_boolean('write_mmcif', False, 'JHL: Write a mmcif file.')
 flags.DEFINE_boolean('write_ranked_pdb', False, 'JHL: Write ranked pdbs.')
 flags.DEFINE_integer('num_predictions_per_model', 5, 'JHL: this overwrites other *num_ouput* options ')
+flags.DEFINE_integer('num_recycle', -1, 'JHL: this overwrites the default num_recycle ')
+flags.DEFINE_string('models', 'all', 'comma-separated model weights to use. ')
 
 flags.DEFINE_bool(
     'use_gpu', True, 'Enable NVIDIA runtime to run with GPUs.')
@@ -88,6 +90,11 @@ flags.DEFINE_boolean(
     'Run multiple JAX model evaluations to obtain a timing that excludes the '
     'compilation time, which should be more indicative of the time required '
     'for inferencing many proteins.')
+flags.DEFINE_integer('random_seed', -1, 'The random seed for the data '
+                     'pipeline. By default, this is randomly generated. Note '
+                     'that even if this is set, Alphafold may still not be '
+                     'deterministic, because processes like GPU inference are '
+                     'nondeterministic.')
 flags.DEFINE_boolean(
     'use_precomputed_msas', False,
     'Whether to read MSAs that have been written to disk instead of running '
@@ -237,6 +244,7 @@ def main(argv):
       f'--max_template_date={FLAGS.max_template_date}',
       f'--db_preset={FLAGS.db_preset}',
       f'--model_preset={FLAGS.model_preset}',
+      f'--models={FLAGS.models}',
       f'--benchmark={FLAGS.benchmark}',
       f'--use_precomputed_msas={FLAGS.use_precomputed_msas}',
       f'--num_multimer_predictions_per_model={FLAGS.num_multimer_predictions_per_model}',
@@ -244,6 +252,8 @@ def main(argv):
       f'--use_gpu={FLAGS.use_gpu}',
       f'--gpu_devices={FLAGS.gpu_devices}',
       f'--use_gpu_relax={use_gpu_relax}',
+      f'--random_seed={FLAGS.random_seed}',
+      f'--num_recycle={FLAGS.num_recycle}',
       '--logtostderr',
   ])
 

@@ -105,6 +105,8 @@ flags.DEFINE_boolean('write_model_output', False, 'JHL: Write model output in a 
 flags.DEFINE_boolean('write_mmcif', False, 'JHL: Write a mmcif file.')
 flags.DEFINE_boolean('write_ranked_pdb', False, 'JHL: Write ranked pdbs.')
 flags.DEFINE_integer('num_predictions_per_model', 5, 'JHL: this overwrites other *num_ouput* options ')
+flags.DEFINE_integer('num_recycle', -1, 'JHL: this overwrites the default num_recycle ')
+flags.DEFINE_string('models', 'all', 'JHL: comma-separated model weights to use. ')
 
 flags.DEFINE_string('max_template_date', None, 'Maximum template release date '
                     'to consider. Important if folding historical test sets.')
@@ -125,7 +127,7 @@ flags.DEFINE_boolean('benchmark', False, 'Run multiple JAX model evaluations '
                      'to obtain a timing that excludes the compilation time, '
                      'which should be more indicative of the time required for '
                      'inferencing many proteins.')
-flags.DEFINE_integer('random_seed', None, 'The random seed for the data '
+flags.DEFINE_integer('random_seed', -1, 'The random seed for the data '
                      'pipeline. By default, this is randomly generated. Note '
                      'that even if this is set, Alphafold may still not be '
                      'deterministic, because processes like GPU inference are '
@@ -537,9 +539,19 @@ def main(argv):
     data_pipeline = monomer_data_pipeline
 
   model_runners = {}
-  model_names = config.MODEL_PRESETS[FLAGS.model_preset]
+  # JHL
+  if FLAGS.models != 'all':
+      # JHL: models_names should be consistent with those in config!
+      model_names = FLAGS.models.split(',')
+  else:
+      model_names = config.MODEL_PRESETS[FLAGS.model_preset]
+  #model_names = config.MODEL_PRESETS[FLAGS.model_preset]
   for model_name in model_names:
     model_config = config.model_config(model_name)
+    # JHL
+    if FLAGS.num_recycle != -1:
+      model_config.model.num_recycle = FLAGS.num_recycle
+    logging.info('num_recycle=%d', model_config.model.num_recycle)
     if run_multimer_system:
       model_config.model.num_ensemble_eval = num_ensemble
     else:
@@ -562,7 +574,7 @@ def main(argv):
       use_gpu=FLAGS.use_gpu_relax)
 
   random_seed = FLAGS.random_seed
-  if random_seed is None:
+  if random_seed == -1:
     random_seed = random.randrange(sys.maxsize // len(model_runners))
   logging.info('Using random seed %d for the data pipeline', random_seed)
 
